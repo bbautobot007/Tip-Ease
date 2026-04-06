@@ -3,13 +3,30 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TipEase API - Cashless tipping platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: users
+    description: User profile and role management
+  - name: wallet
+    description: Guest wallet operations
+  - name: events
+    description: Event management
+  - name: qr-codes
+    description: QR code generation and validation
+  - name: tips
+    description: Tip transactions
+  - name: vendors
+    description: Bartending company / service provider operations
+  - name: notifications
+    description: Notification operations
+  - name: dashboard
+    description: Dashboard summary data
+
 paths:
   /healthz:
     get:
@@ -24,7 +41,570 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # User Profile
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "404":
+          description: User not found
+    put:
+      operationId: updateMe
+      tags: [users]
+      summary: Update current user profile
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserProfileBody"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /users/me/role:
+    post:
+      operationId: setUserRole
+      tags: [users]
+      summary: Set user role
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetUserRoleBody"
+      responses:
+        "200":
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  # Wallet
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get guest wallet balance and info
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /wallet/add-funds:
+    post:
+      operationId: addFundsToWallet
+      tags: [wallet]
+      summary: Add funds to wallet via Stripe
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddFundsBody"
+      responses:
+        "200":
+          description: Payment intent created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentIntentResponse"
+
+  /wallet/transactions:
+    get:
+      operationId: getWalletTransactions
+      tags: [wallet]
+      summary: Get wallet transaction history
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WalletTransaction"
+
+  /wallet/daily-limit:
+    get:
+      operationId: getDailyLimit
+      tags: [wallet]
+      summary: Get current daily spending limit status
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Daily limit info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyLimitStatus"
+
+  # Events
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: List events for the current user (as host or vendor)
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+    post:
+      operationId: createEvent
+      tags: [events]
+      summary: Create a new event (Host only)
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventBody"
+      responses:
+        "201":
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+
+  /events/{eventId}:
+    get:
+      operationId: getEvent
+      tags: [events]
+      summary: Get event details
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "404":
+          description: Event not found
+    patch:
+      operationId: updateEvent
+      tags: [events]
+      summary: Update an event
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEventBody"
+      responses:
+        "200":
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+
+  /events/{eventId}/confirm:
+    post:
+      operationId: confirmEventVendor
+      tags: [events]
+      summary: Vendor confirms or declines participation in an event
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmEventBody"
+      responses:
+        "200":
+          description: Confirmation recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+
+  /events/{eventId}/qr-code:
+    post:
+      operationId: generateQrCode
+      tags: [qr-codes]
+      summary: Generate a QR code for an event
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: QR code created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QrCode"
+    get:
+      operationId: getEventQrCode
+      tags: [qr-codes]
+      summary: Get the QR code for an event
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: QR code info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QrCode"
+
+  /events/{eventId}/revoke:
+    post:
+      operationId: revokeEventQrCode
+      tags: [qr-codes]
+      summary: Revoke/pause a QR code
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: QR code revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QrCode"
+
+  /events/{eventId}/tips:
+    get:
+      operationId: getEventTips
+      tags: [tips]
+      summary: Get tips for an event (vendor or host view)
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of tips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tip"
+
+  # QR Code Scanning
+  /qr/validate/{token}:
+    get:
+      operationId: validateQrCode
+      tags: [qr-codes]
+      summary: Validate a QR code token and get event info (public endpoint)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: QR code is valid, returns event info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QrValidationResult"
+        "400":
+          description: Invalid or expired QR code
+
+  # Tips
+  /tips:
+    post:
+      operationId: sendTip
+      tags: [tips]
+      summary: Send a tip
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendTipBody"
+      responses:
+        "201":
+          description: Tip sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tip"
+        "400":
+          description: Insufficient balance or limit exceeded
+
+  /tips/history:
+    get:
+      operationId: getTipHistory
+      tags: [tips]
+      summary: Get tip history for current user
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: List of tips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tip"
+
+  # Vendors
+  /vendors:
+    get:
+      operationId: listVendors
+      tags: [vendors]
+      summary: List approved vendors (searchable directory)
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of vendors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vendor"
+    post:
+      operationId: createVendorProfile
+      tags: [vendors]
+      summary: Create or update vendor profile
+      security:
+        - clerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVendorBody"
+      responses:
+        "201":
+          description: Vendor profile created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+
+  /vendors/me:
+    get:
+      operationId: getMyVendorProfile
+      tags: [vendors]
+      summary: Get current user's vendor profile
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Vendor profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vendor"
+
+  /vendors/me/events:
+    get:
+      operationId: getVendorEvents
+      tags: [vendors]
+      summary: Get events assigned to this vendor
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+  # Notifications
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: Get notifications for current user
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/{notificationId}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a notification as read
+      security:
+        - clerkAuth: []
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  # Dashboard summaries (wow endpoints)
+  /dashboard/guest:
+    get:
+      operationId: getGuestDashboard
+      tags: [dashboard]
+      summary: Guest dashboard summary - balance, daily usage, recent tips
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Guest dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuestDashboard"
+
+  /dashboard/host:
+    get:
+      operationId: getHostDashboard
+      tags: [dashboard]
+      summary: Host dashboard - event overview and tip totals
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Host dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HostDashboard"
+
+  /dashboard/vendor:
+    get:
+      operationId: getVendorDashboard
+      tags: [dashboard]
+      summary: Vendor dashboard - earnings, recent tips, pending events
+      security:
+        - clerkAuth: []
+      responses:
+        "200":
+          description: Vendor dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorDashboard"
+
+  # Stripe publishable key for client
+  /stripe/publishable-key:
+    get:
+      operationId: getStripePublishableKey
+      tags: [wallet]
+      summary: Get Stripe publishable key for client-side usage
+      responses:
+        "200":
+          description: Publishable key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeKeyResponse"
+
 components:
+  securitySchemes:
+    clerkAuth:
+      type: http
+      scheme: bearer
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +614,550 @@ components:
       required:
         - status
 
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        clerkId:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [guest, host, vendor, admin]
+        limitTier:
+          type: string
+          enum: [standard, verified, enhanced, custom]
+        walletBalance:
+          type: number
+        stripeCustomerId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clerkId
+        - email
+        - name
+        - role
+        - limitTier
+        - walletBalance
+        - createdAt
+
+    UpdateUserProfileBody:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+
+    SetUserRoleBody:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [guest, host, vendor, admin]
+      required:
+        - role
+
+    Wallet:
+      type: object
+      properties:
+        balance:
+          type: number
+        dailyLimit:
+          type: number
+        dailyUsed:
+          type: number
+        limitTier:
+          type: string
+          enum: [standard, verified, enhanced, custom]
+        autoReload:
+          type: boolean
+        autoReloadAmount:
+          type: ["number", "null"]
+        autoReloadThreshold:
+          type: ["number", "null"]
+      required:
+        - balance
+        - dailyLimit
+        - dailyUsed
+        - limitTier
+        - autoReload
+
+    AddFundsBody:
+      type: object
+      properties:
+        amount:
+          type: number
+          description: Amount in dollars
+      required:
+        - amount
+
+    PaymentIntentResponse:
+      type: object
+      properties:
+        clientSecret:
+          type: string
+        publishableKey:
+          type: string
+        amount:
+          type: number
+      required:
+        - clientSecret
+        - publishableKey
+        - amount
+
+    WalletTransaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [deposit, tip, withdrawal, refund]
+        amount:
+          type: number
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - amount
+        - description
+        - createdAt
+
+    DailyLimitStatus:
+      type: object
+      properties:
+        tier:
+          type: string
+          enum: [standard, verified, enhanced, custom]
+        dailyLimit:
+          type: number
+        used:
+          type: number
+        remaining:
+          type: number
+        resetsAt:
+          type: string
+          format: date-time
+      required:
+        - tier
+        - dailyLimit
+        - used
+        - remaining
+        - resetsAt
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+        hostId:
+          type: string
+        vendorId:
+          type: ["string", "null"]
+        name:
+          type: string
+        eventType:
+          type: string
+          enum: [private_party, wedding, corporate, restaurant, public_event, other]
+        venueName:
+          type: string
+        venueAddress:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        expectedGuests:
+          type: ["integer", "null"]
+        perGuestCap:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [draft, pending_vendor, confirmed, active, ended, cancelled]
+        vendorConfirmed:
+          type: boolean
+        hostName:
+          type: string
+        vendorName:
+          type: ["string", "null"]
+        totalTips:
+          type: number
+        tipCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - hostId
+        - name
+        - eventType
+        - venueName
+        - venueAddress
+        - startTime
+        - endTime
+        - status
+        - vendorConfirmed
+        - hostName
+        - totalTips
+        - tipCount
+        - createdAt
+
+    CreateEventBody:
+      type: object
+      properties:
+        name:
+          type: string
+        eventType:
+          type: string
+          enum: [private_party, wedding, corporate, restaurant, public_event, other]
+        venueName:
+          type: string
+        venueAddress:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        expectedGuests:
+          type: integer
+        perGuestCap:
+          type: number
+        vendorId:
+          type: string
+      required:
+        - name
+        - eventType
+        - venueName
+        - venueAddress
+        - startTime
+        - endTime
+
+    UpdateEventBody:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [draft, pending_vendor, confirmed, active, ended, cancelled]
+        perGuestCap:
+          type: number
+
+    ConfirmEventBody:
+      type: object
+      properties:
+        confirmed:
+          type: boolean
+      required:
+        - confirmed
+
+    QrCode:
+      type: object
+      properties:
+        id:
+          type: string
+        eventId:
+          type: string
+        token:
+          type: string
+        qrCodeUrl:
+          type: string
+        status:
+          type: string
+          enum: [active, revoked, expired]
+        validFrom:
+          type: string
+          format: date-time
+        validUntil:
+          type: string
+          format: date-time
+        scanCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - eventId
+        - token
+        - qrCodeUrl
+        - status
+        - validFrom
+        - validUntil
+        - scanCount
+        - createdAt
+
+    QrValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        eventId:
+          type: string
+        eventName:
+          type: string
+        hostName:
+          type: string
+        vendorName:
+          type: string
+        venueName:
+          type: string
+        eventType:
+          type: string
+        perGuestCap:
+          type: ["number", "null"]
+        validUntil:
+          type: string
+          format: date-time
+        message:
+          type: string
+      required:
+        - valid
+        - eventId
+        - eventName
+        - hostName
+        - vendorName
+        - venueName
+        - eventType
+        - validUntil
+        - message
+
+    SendTipBody:
+      type: object
+      properties:
+        eventId:
+          type: string
+        qrToken:
+          type: string
+        amount:
+          type: number
+      required:
+        - eventId
+        - qrToken
+        - amount
+
+    Tip:
+      type: object
+      properties:
+        id:
+          type: string
+        eventId:
+          type: string
+        guestId:
+          type: string
+        vendorId:
+          type: string
+        amount:
+          type: number
+        eventName:
+          type: string
+        vendorName:
+          type: string
+        status:
+          type: string
+          enum: [pending, completed, failed, refunded]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - eventId
+        - guestId
+        - vendorId
+        - amount
+        - eventName
+        - vendorName
+        - status
+        - createdAt
+
+    Vendor:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        companyName:
+          type: string
+        contactName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        businessRegNumber:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        rating:
+          type: ["number", "null"]
+        totalEvents:
+          type: integer
+        totalEarnings:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - companyName
+        - contactName
+        - email
+        - status
+        - totalEvents
+        - totalEarnings
+        - createdAt
+
+    CreateVendorBody:
+      type: object
+      properties:
+        companyName:
+          type: string
+        contactName:
+          type: string
+        phone:
+          type: string
+        businessRegNumber:
+          type: string
+      required:
+        - companyName
+        - contactName
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        type:
+          type: string
+        message:
+          type: string
+        read:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - type
+        - message
+        - read
+        - createdAt
+
+    GuestDashboard:
+      type: object
+      properties:
+        walletBalance:
+          type: number
+        dailyUsed:
+          type: number
+        dailyLimit:
+          type: number
+        dailyRemaining:
+          type: number
+        totalTipsSent:
+          type: number
+        tipCount:
+          type: integer
+        recentTips:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tip"
+        unreadNotifications:
+          type: integer
+      required:
+        - walletBalance
+        - dailyUsed
+        - dailyLimit
+        - dailyRemaining
+        - totalTipsSent
+        - tipCount
+        - recentTips
+        - unreadNotifications
+
+    HostDashboard:
+      type: object
+      properties:
+        totalEvents:
+          type: integer
+        activeEvents:
+          type: integer
+        totalTipsGenerated:
+          type: number
+        recentEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        pendingVendorConfirmations:
+          type: integer
+        unreadNotifications:
+          type: integer
+      required:
+        - totalEvents
+        - activeEvents
+        - totalTipsGenerated
+        - recentEvents
+        - pendingVendorConfirmations
+        - unreadNotifications
+
+    VendorDashboard:
+      type: object
+      properties:
+        totalEarnings:
+          type: number
+        pendingPayouts:
+          type: number
+        todayEarnings:
+          type: number
+        totalEvents:
+          type: integer
+        pendingEvents:
+          type: integer
+        recentTips:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tip"
+        rating:
+          type: ["number", "null"]
+        unreadNotifications:
+          type: integer
+      required:
+        - totalEarnings
+        - pendingPayouts
+        - todayEarnings
+        - totalEvents
+        - pendingEvents
+        - recentTips
+        - unreadNotifications
+
+    StripeKeyResponse:
+      type: object
+      properties:
+        publishableKey:
+          type: string
+      required:
+        - publishableKey

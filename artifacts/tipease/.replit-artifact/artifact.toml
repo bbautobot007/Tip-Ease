@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "TipEase"
+version = "1.0.0"
+id = "artifacts/tipease"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25970
+
+[services.development]
+run = "pnpm --filter @workspace/tipease run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tipease", "run", "build" ]
+publicDir = "artifacts/tipease/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25970"
+BASE_PATH = "/"

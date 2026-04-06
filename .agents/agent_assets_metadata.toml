@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "qk1j44G3KeluGprztqABM"
+uri = "file://artifacts/tipease/public/hero-bg.png"
+type = "image"
+title = "Hero background dark neon"
