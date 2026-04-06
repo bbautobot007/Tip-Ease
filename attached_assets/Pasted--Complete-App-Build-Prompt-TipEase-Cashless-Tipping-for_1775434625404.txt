@@ -1,0 +1,319 @@
+# 📱 Complete App Build Prompt: **TipEase** — Cashless Tipping for Any Occasion
+
+### Phase 1 — MVP (Months 1–4)
+Core guest wallet, QR code scan-and-tip flow, Host event creation, Bartending Company confirmation, basic dashboards, Stripe payment integration, daily $20 limit, push notifications
+---
+
+## 🧭 Overview
+
+Build a mobile-first application called **TipEase** that allows guests at restaurants, private parties, events, and public gatherings to digitally tip bartenders and service staff via QR code scanning — without needing cash. The app serves distinct user types: **Hosts/Organizers**, **Guests/Tippers**, **Bartending Companies/Service Providers**, and **Platform Admins** — with a secure, lightweight verification system, daily spending limits, real-time notifications, and an optional no-app web fallback.
+
+The core philosophy of TipEase is **friction-free for the guest, trustworthy for the host, and profitable for the service provider** — all while maintaining security, compliance, and accessibility at every layer.
+
+---
+
+## 👥 User Roles & Personas
+
+### 1. Guest / Tipper
+A party or event attendee who wants to tip a bartender or server digitally. They may or may not have the app installed. Their experience must be fast, intuitive, and confidence-inspiring — they should be able to tip in under 15 seconds after scanning.
+
+### 2. Host / Organizer
+The person or entity hosting the event (private party, corporate event, wedding, restaurant, bar, etc.) who sets up the tipping environment. They are responsible for creating the event, selecting the Bartending Company, and managing the QR code lifecycle.
+
+### 3. Bartending Company / Service Provider
+A third-party vendor (e.g., a bartending agency, catering company, or individual freelance bartender) who physically operates the bar or service. They act as the operational intermediary between the Host and the Guests and must confirm their participation before any QR code goes live. They receive the tip payouts.
+
+### 4. Platform Admin
+A backend administrative role for managing disputes, limit increase requests, fraud detection, Bartending Company onboarding approvals, compliance reporting, and platform-wide configuration.
+
+---
+
+## 🔐 Authentication & Verification
+
+### For Guests
+- Sign up via email or phone number using OTP (one-time passcode) — simple and fast, no passwords required
+- Optional: Sign in with Google or Apple ID for maximum convenience
+- Must add at least one payment method before tipping is enabled
+- Light KYC (Know Your Customer): name, email, and phone number — no heavy identity verification unless requesting a limit increase (see Spending Limits section)
+- Session tokens with auto-expiry; re-authentication required after 30 days of inactivity
+
+### For Hosts / Organizers
+- Full account registration: legal name, email, phone number, and venue or organization name
+- Must verify a valid payout method (bank account or linked Bartending Company) before creating a live event
+- Email verification required; optional two-factor authentication (2FA) via authenticator app or SMS
+- Hosts can manage multiple events simultaneously under one account
+
+### For Bartending Companies / Service Providers
+- Business registration: company name, primary contact, business email, phone, and EIN or business registration number
+- Must be reviewed and approved by Platform Admin before their profile is searchable by Hosts
+- Upon approval, they appear in the platform's verified vendor directory
+- They are linked to specific events only after explicit mutual confirmation with the Host (see QR Code Flow)
+- Individual freelance bartenders can register as sole proprietors under the same flow
+
+### For Platform Admins
+- Internal-only access via a secure admin portal (not the public app)
+- Role-based access control (RBAC): super admin, support agent, compliance officer
+- Full audit log access for all transactions, user actions, and QR code events
+
+---
+
+## 💳 Payment & Funding
+
+### Supported Methods for Adding Funds (Guest Wallet)
+- Credit Card (Visa, Mastercard, American Express, Discover)
+- Debit Card
+- PayPal
+- Venmo
+- Stripe Link (for returning Stripe users — one-click checkout)
+- Apple Pay and Google Pay (for native mobile users)
+
+### In-App Wallet System
+- Guests pre-load funds into a secure in-app wallet before or at the time of tipping
+- Tips are deducted from wallet balance in real time with instant confirmation
+- Wallet balance is always visible on the Guest home screen
+- Low-balance push notification triggered when wallet drops below $5
+- Optional auto-reload: Guest can configure automatic top-up of a set amount (e.g., $10) when balance falls below a threshold — off by default, requires explicit opt-in
+- Unused wallet funds can be withdrawn back to the original payment method within 30 days; after 30 days, funds remain as wallet credit indefinitely
+
+### Payouts to Bartenders / Service Providers
+- All tips accumulate in the Bartending Company's platform account in real time
+- Payout options: daily automatic payout or on-demand withdrawal (T+1 business day to linked bank account)
+- Stripe Connect used for payout infrastructure — supports US and international bank accounts
+- Platform processing fee: 2.5% per transaction (configurable by Platform Admin)
+- Bartending Companies receive a full transaction summary per event for their own accounting
+
+---
+
+## 💰 Daily Spending Limits
+
+The daily limit system serves a dual purpose: it protects guests from overspending and acts as a natural, courteous brake on excessive alcohol consumption at open-bar events.
+
+| Tier | Daily Tip Limit | Verification Required |
+|---|---|---|
+| Standard | $20 / day | Default — phone + email OTP |
+| Verified | $50 / day | Phone + email both confirmed |
+| Enhanced | $100 / day | Government ID scan via Stripe Identity |
+| Custom | Above $100 | Manual review by Platform Admin (24–72 hrs) |
+
+### Limit Increase Request Flow
+1. Guest taps **"Request Limit Increase"** in Account Settings
+2. Selects the desired tier and provides a brief reason (dropdown: personal preference, large event, corporate use, other)
+3. App triggers the appropriate verification step for that tier
+4. Verified tier: instant approval upon successful OTP confirmation
+5. Enhanced tier: ID scan processed via Stripe Identity — typically approved within minutes
+6. Custom tier: flagged for manual Platform Admin review; guest notified of decision within 24–72 hours
+7. Daily limit resets every night at midnight based on the guest's local time zone
+8. Guests always see their current limit and how much of it has been used on their home screen
+
+---
+
+## 📲 QR Code Flow — The Core Experience
+
+This is the heart of the app. Every interaction traces back to a single QR code that is cryptographically secure, time-bound, and mutually confirmed by both Host and Bartending Company.
+
+### Step 1: Host Creates an Event
+- Host logs in and taps **"Create New Event"**
+- Fills in event details: Event Name, Date and Time, Venue Name and Address, Expected Guest Count, and Event Type (private party, wedding, corporate, restaurant, public event, other)
+- Searches the verified vendor directory and selects a registered **Bartending Company** (or invites one by email if not yet registered)
+- Optionally sets a per-guest tip cap for the event (e.g., max $10 per scan per guest) — this stacks on top of the platform's daily limit
+- Submits the event — status shows as **"Pending Vendor Confirmation"**
+
+### Step 2: Bartending Company Confirms
+- Bartending Company receives an in-app notification and email: *"[Host Name] has listed you as the service provider for [Event Name] on [Date] at [Venue]. Please confirm or decline your participation."*
+- They review the event details and tap **Confirm** or **Decline**
+- If they confirm, the Host is immediately notified and the **"Generate QR Code"** button becomes active
+- If they decline, the Host is notified and can select a different vendor
+- This dual-confirmation step ensures no QR code can go live with a falsified or unverified vendor name — protecting both guests and vendors from fraud
+
+### Step 3: QR Code Generation and Display
+- Host taps **"Generate QR Code"** — a unique, signed QR code is created for this event
+- The QR code encodes: Event ID, Host Display Name (as mutually confirmed), Bartending Company ID and Name, Event validity window (start and end time), and a cryptographic signature verified by the platform backend
+- Host can: display the QR code on-screen from the app, download it as a high-resolution image for printing (table tents, posters, bar signage), or share it digitally via link
+- QR codes are **time-locked**: they only become scannable within the configured event window and auto-expire when the event ends
+- Host can pause or revoke the QR code at any time from their dashboard (e.g., if the event ends early)
+- Each QR code can only be associated with one active event at a time — no reuse across events
+
+### Step 4: Guest Scans and Tips
+- Guest opens TipEase and taps **"Scan to Tip"** — or, if using the web fallback, simply points their phone camera at the QR code
+- The app displays a verification screen: ✅ *"You're tipping at [Event Name], hosted by [Host Name], served by [Bartending Company Name] — verified by TipEase"*
+- Guest selects tip amount from preset buttons ($1, $2, $3, $5) or enters a custom amount — all capped by their remaining daily limit and any event-level cap set by the Host
+- Confirms the tip using Face ID, Touch ID, or a 4-digit PIN — no accidental tips
+- Tip is instantly deducted from the wallet; the guest receives a push notification receipt; the Bartending Company's dashboard updates in real time
+
+---
+
+## 🎯 Smart Tip Suggestions
+
+The app uses contextual signals to suggest appropriate tip amounts, making the experience feel intelligent rather than generic.
+
+- **Time of night**: Later in the evening, the default suggested tip increases slightly (e.g., $2 suggested at 7 PM, $3–$5 suggested after 10 PM)
+- **Event type**: Corporate events and weddings surface slightly higher suggestions than casual house parties
+- **Repeat scanning**: If a guest scans multiple times in one night, the app gently suggests lower amounts on subsequent scans to stay within comfortable limits
+- **POS integration** (optional, if venue uses a supported system): If drink order data is available, suggest a tip proportional to the order value
+- Suggestions are always just that — suggestions. The guest has full control
+
+---
+
+## 👫 Split Tipping — Group Mode
+
+Perfect for groups of friends ordering together at a shared bar.
+
+- One person scans the QR code and selects **"Split with Group"**
+- Enters the number of people splitting (2–10)
+- Enters the total tip amount — the app calculates each person's share
+- The app generates a temporary group session link or QR code (valid for 5 minutes)
+- Each group member opens the link or scans and sees: *"[Friend's Name] is splitting a $10 tip — your share is $2. Approve?"*
+- Each person approves using their own TipEase account and their own wallet
+- Once all shares are approved (or the 5-minute window closes), the full tip is sent
+- If some members don't approve in time, the initiating guest is asked if they want to cover the remainder or reduce the tip
+
+---
+
+## ⭐ Post-Event Bartender Ratings
+
+After an event ends, guests who tipped receive a brief, optional rating prompt.
+
+- Simple 1–5 star rating for the overall bartending service
+- Optional one-line text comment (no public display — private feedback only)
+- Ratings are visible only to the Bartending Company and Platform Admin — never shown publicly or to other guests
+- Bartending Companies can view their aggregate rating across all events in their dashboard
+- Platform Admin uses ratings data to flag consistently low-rated vendors for review
+
+---
+
+## 🔔 Real-Time Notifications
+
+### Guest Notifications
+- "Your $3 tip was sent to [Bartending Company] at [Event Name]!" (instant)
+- "Your wallet balance is below $5 — tap to add funds"
+- "Your daily tip limit resets at midnight tonight"
+- "Your limit increase request has been approved" / "...requires additional review"
+- "Event tip session is now active — scan to tip at [Event Name]"
+
+### Bartending Company Notifications
+- "New tip received: $3 from a guest at [Event Name]" (real time)
+- "Your payout of $[X] has been initiated and will arrive by [Date]"
+- "New event confirmation request from [Host Name] for [Date]"
+- "Event [Name] has ended — final tip total: $[X]"
+
+### Host Notifications
+- "[Bartending Company] has confirmed your event [Name]"
+- "Your QR code for [Event Name] is now live"
+- "Your event QR code has been scanned [X] times today"
+- "[Bartending Company] has declined your event request — please select another vendor"
+
+---
+
+## 🌐 No-App Web Fallback
+
+For guests who do not want to download the app — ensuring no one is ever left without a way to tip.
+
+- When a guest scans the QR code without the TipEase app installed, their phone browser opens a lightweight progressive web app (PWA)
+- The web fallback displays the same event verification screen as the native app
+- Guest enters their phone number → receives an OTP → verified in seconds
+- Enters tip amount and pays via one-time card entry, Apple Pay, or Google Pay — no account creation required
+- A receipt is sent via SMS
+- After the event, the guest is gently invited to create a full TipEase account to save their payment method for future events
+- Web fallback sessions are fully logged and secured identically to native app sessions
+
+---
+
+## 📊 Dashboards
+
+### Guest Dashboard
+- Current wallet balance (prominent, always visible)
+- Today's tips sent vs. daily limit remaining (visual progress bar)
+- Full tip history: date, event name, amount, bartending company
+- Saved payment methods (add, remove, set default)
+- Current limit tier and one-tap upgrade option
+- Active events nearby (if location permission granted — optional)
+
+### Host Dashboard
+- All events: upcoming, active, and past
+- Per-event summary: total tips collected (aggregate), number of unique tippers, QR code scan count
+- QR code controls: generate, display, pause, revoke
+- Linked Bartending Companies for each event
+- Event-level tip cap settings
+- Downloadable event reports (CSV or PDF)
+
+### Bartending Company Dashboard
+- Live incoming tip feed (real time during events)
+- Per-event tip totals and guest count
+- Aggregate earnings: today, this week, this month, all time
+- Payout history and upcoming scheduled payouts
+- Events calendar: confirmed upcoming, pending confirmation, past
+- Aggregate star rating and feedback summary
+- Tax documents: downloadable 1099 forms (auto-generated above IRS threshold)
+
+### Platform Admin Portal
+- Full user management: guests, hosts, bartending companies
+- Transaction ledger with filter and export
+- Limit increase request queue with approve/deny workflow
+- Fraud and velocity alert dashboard
+- Bartending Company onboarding approval queue
+- Platform-wide fee configuration
+- Compliance and tax reporting tools
+- System health and uptime monitoring
+
+---
+
+## 🛡️ Security Architecture
+
+- **Cryptographically signed QR codes**: Each QR code is signed using RS256 JWT with a short TTL — cannot be forged, spoofed, replicated, or reused across events
+- **Host–Vendor mutual confirmation**: No QR code is generated until both the Host and the Bartending Company have explicitly confirmed the event — eliminating impersonation attacks
+- **Time-locked codes**: QR codes only function within the configured event window — scanning outside that window returns an "Event not active" message
+- **Biometric + PIN confirmation on every tip**: Face ID, Touch ID, or 4-digit PIN required — eliminates accidental or unauthorized tips
+- **Velocity checks**: The backend flags and temporarily blocks accounts showing unusual patterns — e.g., the same guest tipping more than 10 times in 30 minutes, or a QR code being scanned from geographically impossible locations simultaneously
+- **End-to-end encryption**: All payment data, wallet balances, and personal information transmitted over TLS 1.3; card data never touches TipEase servers (tokenized via Stripe)
+- **Tip privacy**: Individual tip amounts are never shown to other guests, hosts, or bartenders — only aggregate totals are visible to Hosts and Bartending Companies
+- **Session security**: JWT-based sessions with refresh token rotation; automatic logout after inactivity
+- **Device fingerprinting**: Detects and flags the same account being used across multiple devices simultaneously
+
+---
+
+## 🌍 Additional Platform Features
+
+### Multi-Currency Support
+- Display tip amounts in the guest's local currency
+- Settle payouts in USD by default, with international currency support for non-US Bartending Companies via Stripe Connect's global payout network
+- Exchange rates sourced in real time; guests always see the exact amount being charged
+
+### POS and Event Management Integrations (Optional Add-Ons)
+- **Point-of-sale**: Toast, Square, Clover — allows drink order data to inform smart tip suggestions
+- **Event platforms**: Eventbrite, RSVPify — allows Hosts to auto-import guest lists and event details
+- **Accounting**: QuickBooks, Xero — allows Bartending Companies to sync tip income directly to their books
+
+### Accessibility
+- Full VoiceOver (iOS) and TalkBack (Android) support throughout the app
+- High-contrast display mode for visually impaired users
+- Large-text mode that respects system font size settings
+- All interactive elements meet WCAG 2.1 AA accessibility standards
+- QR code scanner includes audio cues for successful scans
+
+### Localization
+- Full support for English, Spanish, French, and Portuguese at launch
+- Architecture supports adding additional languages without restructuring
+- All date, time, and currency formats adapt to the user's locale
+
+---
+
+## 🏗️ Recommended Tech Stack
+
+| Layer | Recommendation | Rationale |
+|---|---|---|
+| Mobile App | React Native (iOS + Android) | Single codebase, native performance, large talent pool |
+| Web Fallback | Next.js (PWA) | Fast, SEO-friendly, works as installable PWA |
+| Backend API | Node.js + Express or Django REST | Scalable, well-documented, strong ecosystem |
+| Database | PostgreSQL | Reliable relational DB for transactional financial data |
+| Cache / Rate Limiting | Redis | Session management, velocity checks, real-time counters |
+| Payments | Stripe (cards, wallets, payouts via Stripe Connect) + PayPal SDK + Venmo API | Industry standard, PCI-compliant out of the box |
+| Authentication | Firebase Auth or Auth0 | OTP, OAuth (Google/Apple), 2FA all supported |
+| QR Code Signing | JWT with RS256 + short TTL | Cryptographically secure, tamper-proof |
+| Push Notifications | Firebase Cloud Messaging (FCM) | Cross-platform, reliable, free tier sufficient at launch |
+| File Storage | AWS S3 or Google Cloud Storage | QR code images, tax documents, event assets |
+| Hosting & Infrastructure | AWS (ECS + RDS + ElastiCache) or GCP | Auto-scaling, high availability, global CDN |
+| Admin Portal | React + Tailwind CSS (internal web app) | Fast to build, easy to maintain |
+| ID Verification | Stripe Identity | Integrated with existing Stripe setup, covers Enhanced tier |
+| Monitoring | Datadog or Sentry | Error tracking, uptime alerts, performance monitoring |
+
+---
